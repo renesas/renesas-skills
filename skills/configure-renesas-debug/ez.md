@@ -1,0 +1,216 @@
+# EZ Hardware Debug Configuration Rules and Instructions
+
+This document defines **EZ Hardware Debug Configuration-specific rules, constraints, and templates** for Renesas hardware debug configurations in `.vscode/launch.json`.
+
+This file is **not a standalone skill**. It provides **EZ Debug Configuration-specific constraints** for the **Renesas Hardware Launch Configuration** skill and must be applied **only when the selected debugger is EZ**.
+
+## Scope
+
+Apply the instructions in this file **only when all of the following are true**:
+
+- The debugger type is **EZ**
+- The debug adapter is Renesas hardware:
+  - `"type": "renesas-hardware"`
+  - `target.debuggerType` is set to `"EZ"`
+
+## Core Assumptions
+
+When this file is used:
+
+- The user intent has already been classified as a **hardware debug launch configuration** request
+- `.vscode/launch.json` is the target file
+- Requests for non-EZ debuggers are assumed to have been filtered out by the entry skill
+
+## EZ Debug Configuration Template
+
+Use this template when **creating** a new EZ debug configuration:
+
+```json
+{
+  "configurations": [
+    {
+      "type": "renesas-hardware",
+      "request": "launch",
+      "name": "Renesas GDB Hardware Debugging",
+      "target": {
+        "device": "DEVICE",
+        "deviceFamily": "DEVICE_FAMILY",
+        "debuggerType": "EZ"
+      }
+    }
+  ],
+  "version": "0.2.0"
+}
+```
+
+### Template Notes
+
+- The `device` and `deviceFamily` values shown above are **examples only**
+- The `debuggerType` value must always be set to `"EZ"` and must not be changed
+- Do **not** overwrite an existing configuration name unless the user explicitly requests it
+- Do **not** guess placeholder values such as `DEVICE` or `DEVICE_FAMILY`
+- The template above contains only required fields. Optional fields may be added when explicitly requested by the user — see [Additional Optional Fields](#additional-optional-fields)
+- If any required values are unknown, ask the user to provide them before proceeding
+
+## Supported Device Families
+
+Supported device families depend on the EZ debugger and the selected device.
+
+If the user requests an EZ configuration for a **non-supported family** (RX, RH850, RZ, RA, RISC-V MCU, ...):
+
+- Do **not** create the configuration
+- Inform the user that the EZ does not support that device family
+
+## Required Fields
+
+A valid **EZ** debug configuration **must include** the following fields
+inside the `target` object:
+
+- `device`
+- `deviceFamily`
+- `debuggerType`
+
+### Required Value
+
+- `debuggerType` **must** be `"EZ"`
+
+### Strict Rule
+
+If **any required field is missing**:
+
+- **Do not guess**
+- **Do not insert default values**
+- **Always ask the user** to provide the missing field or fields before proceeding
+
+## File Modification Rules
+
+### General Rules
+
+- Only modify `.vscode/launch.json` **when explicitly requested** by the user
+- Never modify unrelated launch configurations
+- Never apply these EZ-specific rules to other debuggers
+
+### When Creating a New File or New Configuration
+
+- Output a **complete, valid JSON file**
+- Do **not** output JSON fragments or partial objects
+- Ensure the result can be pasted directly into `.vscode/launch.json`
+- If the `.vscode/` directory does not exist, note that it must be created before the file can be placed at `.vscode/launch.json`
+
+### When Editing an Existing File
+
+- Preserve all unrelated configurations
+- Only modify the intended EZ-related configuration
+- If multiple EZ debug configurations exist and the user does not specify which one to modify, ask the user to identify the configuration by `name` or position before proceeding
+
+### JSON Validity Requirements
+
+- Do not include trailing commas
+- Ensure correct object nesting and structure
+- The output must be valid JSON
+
+## Target Object Modification Rules
+
+For **EZ-specific parameter updates**:
+
+- Only modify fields inside the `target` object unless the user explicitly requests changes outside it
+- Do **not** change the following fields unless the user explicitly asks:
+  - `type`
+  - `request`
+  - `name`
+
+All other fields inside `target` that are **not mentioned by the user** must remain unchanged.
+
+### Missing Target Object
+
+If the selected configuration does **not** contain a `target` object:
+
+- Do **not** create one automatically
+- Ask the user whether the configuration should be replaced or updated explicitly
+
+## Additional Optional Fields
+
+The following fields are **not required** for a standard debug configuration but may be added when explicitly requested by the user.
+
+### Fields at the same level as `target`
+
+- `gdbArguments` — command line arguments passed to GDB during the debug session
+- `initCommands` — list of GDB commands sent after attaching to target before loading image on target
+- `preRunCommands` — list of GDB commands sent after loading image on target before resuming target
+- `images` — defines the list of images to be downloaded during the debug session. Each item is an object with the following properties:
+  - `file` *(required)* — path to the target file (e.g. `"${workspaceFolder}/build/image.elf"`)
+  - `type` *(optional)* — type of file to be loaded, defaults to `"image-and-symbols"`. Valid values:
+    - `"image-and-symbols"`
+    - `"image-only"`
+    - `"symbols"`
+    - `"binary"`
+  - `offset` *(optional)* — memory offset for the image, defaults to `"0x0"`
+  - `program` *(optional)* — set `true` to declare this as the main program image
+
+### Fields inside `target`
+
+- `supportFolder` — path to the device family specific support folder. Defaults to the folder managed by the Renesas Debug extension
+
+### Rules
+
+- Do **not** add these fields unless the user explicitly requests them
+- Do **not** guess or insert default values for these fields
+- If the user requests one of these fields but does not provide a value, ask the user to provide the value before proceeding
+
+### Example
+
+```json
+{
+  "configurations": [
+    {
+      "type": "renesas-hardware",
+      "request": "launch",
+      "name": "Renesas GDB Hardware Debugging",
+      "target": {
+      "device": "R7FA4M2AD",
+      "deviceFamily": "RA",
+      "debuggerType": "SEGGERJLINKARM",
+      "supportFolder": "${command:supportFolder}"
+    },
+      "gdbArguments": [],
+      "preRunCommands": [],
+      "initCommands": [],
+      "images": [
+        {
+          "file": "${workspaceFolder}/build/image.elf",
+          "type": "image-and-symbols",
+          "program": true
+        }
+      ]
+    }
+  ],
+  "version": "0.2.0"
+}
+```
+
+## Safety Rules
+
+These rules apply in **all cases**:
+
+- Never modify unrelated launch configurations
+- Never apply EZ-specific rules to other debuggers
+- Never guess required values
+- Never silently insert default values
+- Never use the EZ for unsupported device families
+
+## Expected Behavior Summary
+
+When handling EZ launch configuration requests:
+
+1. Confirm the request is for:
+   - `"type": "renesas-hardware"`
+   - `target.debuggerType = "EZ"`
+2. Confirm the target `deviceFamily` is supported by the EZ
+3. Check that required fields exist:
+   - `device`
+   - `deviceFamily`
+   - `debuggerType`
+4. If required values are missing, ask the user before making changes
+5. Modify only the intended EZ debug configuration
+6. Keep unrelated configurations unchanged
+7. Return valid JSON suitable for `.vscode/launch.json`

@@ -64,6 +64,8 @@ Use this template when **creating** a new E2/E2Lite hardware debug configuration
 - `debuggerType` can be either `"E2"` or `"E2LITE"` depending on the emulator used
 - Do **not** overwrite an existing configuration name unless the user explicitly requests it
 - Do **not** guess placeholder values such as `DEVICE` or `DEVICE_FAMILY`
+- The template above contains only required fields. Optional fields may be added when explicitly requested by the user — see [Additional Optional Fields](#additional-optional-fields)
+- If any required values are unknown, ask the user to provide them before proceeding
 
 ## Required Fields
 
@@ -130,6 +132,66 @@ If the selected configuration does **not** contain a `target` object:
 
 - Do **not** create one automatically
 - Ask the user whether the configuration should be replaced or updated explicitly
+
+## Additional Optional Fields
+
+The following fields are **not required** for a standard debug configuration but may be added when explicitly requested by the user.
+
+### Fields at the same level as `target`
+
+- `gdbArguments` — command line arguments passed to GDB during the debug session
+- `initCommands` — list of GDB commands sent after attaching to target before loading image on target
+- `preRunCommands` — list of GDB commands sent after loading image on target before resuming target
+- `images` — defines the list of images to be downloaded during the debug session. Each item is an object with the following properties:
+  - `file` *(required)* — path to the target file (e.g. `"${workspaceFolder}/build/image.elf"`)
+  - `type` *(optional)* — type of file to be loaded, defaults to `"image-and-symbols"`. Valid values:
+    - `"image-and-symbols"`
+    - `"image-only"`
+    - `"symbols"`
+    - `"binary"`
+  - `offset` *(optional)* — memory offset for the image, defaults to `"0x0"`
+  - `program` *(optional)* — set `true` to declare this as the main program image
+
+### Fields inside `target`
+
+- `supportFolder` — path to the device family specific support folder. Defaults to the folder managed by the Renesas Debug extension
+
+### Rules
+
+- Do **not** add these fields unless the user explicitly requests them
+- Do **not** guess or insert default values for these fields
+- If the user requests one of these fields but does not provide a value, ask the user to provide the value before proceeding
+
+### Example
+
+```json
+{
+  "configurations": [
+    {
+      "type": "renesas-hardware",
+      "request": "launch",
+      "name": "Renesas GDB Hardware Debugging",
+      "target": {
+      "device": "R7FA4M2AD",
+      "deviceFamily": "RA",
+      "debuggerType": "SEGGERJLINKARM",
+      "supportFolder": "${command:supportFolder}"
+    },
+      "gdbArguments": [],
+      "preRunCommands": [],
+      "initCommands": [],
+      "images": [
+        {
+          "file": "${workspaceFolder}/build/image.elf",
+          "type": "image-and-symbols",
+          "program": true
+        }
+      ]
+    }
+  ],
+  "version": "0.2.0"
+}
+```
 
 ## Hotplug Support Rules (E2/E2Lite)
 
