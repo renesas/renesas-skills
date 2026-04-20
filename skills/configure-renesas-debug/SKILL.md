@@ -28,8 +28,11 @@ debugger-specific instructions.
 
 - If the request involves **SEGGER J-Link** → follow instructions in [SEGGER J-Link Hardware Debug Configuration Rules and Instructions](jlink.md)
 - If the request involves **E2/E2Lite** → follow instructions in [E2/E2Lite Hardware Debug Configuration Rules and Instructions](e2-e2lite.md)
-- If the request involves **E1, E20, EZ, IECUBE, COMPORT** → follow instructions in [General Debugger Instructions](general-instructions.md)
 - If the request involves **Simulator** → follow instructions in [Simulator Debug Configuration Rules and Instructions](simulator.md)
-- If only general launch configuration logic is requested → use shared rules
+- If the request involves **E1** → follow instructions in [E1 Hardware Debug Configuration Rules and Instructions](e1.md)
+- If the request involves **E20** → follow instructions in [E20 Hardware Debug Configuration Rules and Instructions](e20.md)
+- If the request involves **EZ** → follow instructions in [EZ Hardware Debug Configuration Rules and Instructions](ez.md)
+- If the request involves **IECUBE** → follow instructions in [IECUBE Hardware Debug Configuration Rules and Instructions](iecube.md)
+- If the request involves **COMPORT** → follow instructions in [COMPORT Hardware Debug Configuration Rules and Instructions](comport.md)
 
 Debugger-specific files contain the detailed rules and constraints.
