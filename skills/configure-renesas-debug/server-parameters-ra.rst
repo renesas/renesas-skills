@@ -186,9 +186,9 @@ Emulator
 | Option     | Details                                                                                   |
 +------------+-------------------------------------------------------------------------------------------+
 | ``-sn=``   | |  Description: Specify the emulator serial number to be connected.                       |
-|            | |  Default Values: None (Emulator will be selected automatically.)                        |
+|            | |  Default Values: Auto (Emulator will be selected automatically.)                        |
 |            | |  Emulator: E2, E2Lite                                                                   |
-|            | |  Available Values: 0: Emulator information with format: <emulator type>:<serial number> |
+|            | |  Available Values: Emulator information with format: <emulator type>:<serial number>    |
 |            | |  Example: ``"serverParameters": { "-sn=": "e2:_9es002310c" }``                          |
 +------------+-------------------------------------------------------------------------------------------+
 
