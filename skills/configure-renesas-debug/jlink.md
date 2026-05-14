@@ -1,4 +1,4 @@
-# SEGGER J-Link Hardware Debug Configuration Rules and Inst
+# SEGGER J-Link Hardware Debug Configuration Rules and Instructions
 
 This document defines **SEGGER J-Link hardware debug configuration–specific rules, constraints, and templates** for Renesas hardware debug configurations in `.vscode/launch.json`.
 
@@ -52,6 +52,27 @@ The value of `target.debuggerType` **must match** the architecture of the select
 | RX           | SEGGERJLINKRX    |
 | RISC-V MCU   | SEGGERJLINKRISCV |
 
+## Device Family to Server Parameters Documentation Mapping
+
+Each `deviceFamily` has a dedicated documentation file for supported server parameters.
+When validating or explaining `serverParameters`, always reference the file that corresponds
+to the `deviceFamily` of the current configuration — **do not use a generic or unrelated file**.
+
+| deviceFamily | Server Parameters Documentation File |
+|--------------|---------------------------------------|
+| RA           | server-parameters-ra.rst              |
+| RX           | server-parameters-rx.rst              |
+| RZ           | server-parameters-rz.rst              |
+| RISC-V MCU   | server-parameters-riscv.rst           |
+| Dialog       | server-parameters-dialog.rst          |
+
+### Rules
+
+- Always determine `deviceFamily` **before** looking up any server parameter
+- Use **only** the file mapped to the active `deviceFamily`
+- **Never** cross-reference a parameter from a different family's file
+- If `deviceFamily` is unknown or not yet confirmed, ask the user before proceeding
+
 ## J-Link Debug Configuration Template
 
 Use this template when **creating** a new J-Link hardware debug configuration.
@@ -83,8 +104,13 @@ Use this template when **creating** a new J-Link hardware debug configuration.
 - `device` and `deviceFamily` values are **examples only**
 - Do **not** overwrite an existing configuration name unless the user explicitly requests it
 - Do **not** guess placeholder values
-- The template above contains only required fields. Optional fields may be added when explicitly requested by the user — see [Additional Optional Fields](#additional-optional-fields)
 - If any required values are unknown, ask the user to provide them before proceeding
+
+> **The template above is the complete output for a creation request.**
+> Do **not** add any field beyond what is shown here unless the user **explicitly** names
+> that field in their request. Fields such as `images`, `gdbArguments`, `initCommands`,
+> `preRunCommands`, and `supportFolder` are **never** added automatically —
+> see [Additional Optional Fields](#additional-optional-fields).
 
 ## Required Fields
 
@@ -149,6 +175,10 @@ For **J-Link-specific parameter updates**:
 
 All other fields inside `target` that are **not mentioned by the user** must remain unchanged.
 
+> **This rule applies to both create and edit operations.**
+> When creating a new configuration, only include the fields the user asked for.
+> Do not add extra fields inside or outside `target` because they seem useful or complete.
+
 ### Missing Target Object
 
 If the selected configuration does **not** contain a `target` object:
@@ -160,11 +190,16 @@ If the selected configuration does **not** contain a `target` object:
 
 The following fields are **not required** for a standard debug configuration but may be added when explicitly requested by the user.
 
+> **Critical Rule**: These fields are **strictly opt-in**. Do **not** add any of them
+> when creating or updating a configuration unless the user **explicitly** asks for that
+> specific field by name. Do not add them as a convenience, as defaults, or because they
+> appear in examples.
+
 ### Fields at the same level as `target`
 
-- `gdbArguments` — command line arguments passed to GDB during the debug session
-- `initCommands` — list of GDB commands sent after attaching to target before loading image on target
-- `preRunCommands` — list of GDB commands sent after loading image on target before resuming target
+- `gdbArguments` — command line arguments passed to GDB executable at startup (before GDB begins running)
+- `initCommands` — list of GDB commands sent after attaching to target, before loading image on target
+- `preRunCommands` — list of GDB commands sent after loading image on target, before resuming target
 - `images` — defines the list of images to be downloaded during the debug session. Each item is an object with the following properties:
   - `file` *(required)* — path to the target file (e.g. `"${workspaceFolder}/build/image.elf"`)
   - `type` *(optional)* — type of file to be loaded, defaults to `"image-and-symbols"`. Valid values:
@@ -175,15 +210,96 @@ The following fields are **not required** for a standard debug configuration but
   - `offset` *(optional)* — memory offset for the image, defaults to `"0x0"`
   - `program` *(optional)* — set `true` to declare this as the main program image
 
+### GDB Command Reference for initCommands and preRunCommands
+
+When the user asks for suggestions or help with commands to add to `initCommands` or
+`preRunCommands`, follow these rules:
+
+#### Command Source
+
+All available GDB commands and their descriptions are documented in **`renesas-gdb-backends.rst`**.
+Use this file as the **sole reference** when suggesting commands. Do not suggest commands
+that are not listed in this file.
+
+#### How to Suggest Commands
+
+When the user describes what they want to achieve (e.g. "reset the target before running",
+"set a breakpoint at hal_entry", "enable verbose output"):
+
+1. Look up `renesas-gdb-backends.rst` for commands whose **Description** matches the user's intent
+2. Check the **`Auto by Extension`** column for each matching command
+3. Suggest the command with the appropriate notice based on the result:
+
+**If `Auto by Extension = No`** → suggest freely:
+
+> You can safely add this command to `initCommands` or `preRunCommands`.
+
+**If `Auto by Extension = Yes`** → warn the user before suggesting:
+
+> **`<command>`** is already sent automatically by the Renesas Debug extension.
+> Adding it manually to `initCommands` or `preRunCommands` will cause it to be sent **twice**,
+> which may lead to unexpected behavior or conflicts.
+> Consider whether you still need to add it manually.
+
+#### Auto Command Warning — Strict Rule
+
+- **Never** silently suggest a command that has `Auto by Extension = Yes`
+- **Always** show the warning above before including it in any suggested configuration
+- If the user explicitly confirms they want to add it anyway, include it with an inline comment noting the duplicate risk
+
 ### Fields inside `target`
 
 - `supportFolder` — path to the device family specific support folder. Defaults to the folder managed by the Renesas Debug extension
 
 ### Rules
 
-- Do **not** add these fields unless the user explicitly requests them
+- **Never** add any optional field unless the user explicitly names it in their request
+- **Never** infer that the user wants an optional field based on context or common usage
+- **Never** add optional fields as part of a "complete" or "best practice" configuration
 - Do **not** guess or insert default values for these fields
 - If the user requests one of these fields but does not provide a value, ask the user to provide the value before proceeding
+
+**Minimal template — correct** (no optional fields added unless requested):
+
+```json
+{
+  "configurations": [
+    {
+      "type": "renesas-hardware",
+      "request": "launch",
+      "name": "Renesas GDB Hardware Debugging",
+      "target": {
+        "device": "R7FA4M2AD",
+        "deviceFamily": "RA",
+        "debuggerType": "SEGGERJLINKARM"
+      }
+    }
+  ],
+  "version": "0.2.0"
+}
+```
+
+**Wrong** — `images`, `gdbArguments`, etc. added without user request:
+
+```json
+{
+  "configurations": [
+    {
+      "type": "renesas-hardware",
+      "request": "launch",
+      "name": "Renesas GDB Hardware Debugging",
+      "target": {
+        "device": "R7FA4M2AD",
+        "deviceFamily": "RA",
+        "debuggerType": "SEGGERJLINKARM"
+      },
+      "images": [...],
+      "gdbArguments": []
+    }
+  ],
+  "version": "0.2.0"
+}
+```
 
 ### Example
 
@@ -195,11 +311,11 @@ The following fields are **not required** for a standard debug configuration but
       "request": "launch",
       "name": "Renesas GDB Hardware Debugging",
       "target": {
-      "device": "R7FA4M2AD",
-      "deviceFamily": "RA",
-      "debuggerType": "SEGGERJLINKARM",
-      "supportFolder": "${command:supportFolder}"
-    },
+        "device": "R7FA4M2AD",
+        "deviceFamily": "RA",
+        "debuggerType": "SEGGERJLINKARM",
+        "supportFolder": "${command:supportFolder}"
+      },
       "gdbArguments": [],
       "preRunCommands": [],
       "initCommands": [],
@@ -263,12 +379,46 @@ Example (disable hotplug — remove the field):
 
 ### Placement
 
-- `serverParameters` **must** be placed inside the `target` object
-- It must be at the same level as:
-  - `device`
-  - `deviceFamily`
-  - `debuggerType`
-  - `hotPlug` if present
+> **Critical Rule**: `serverParameters` **must always be placed inside the `target` object**.
+> Placing it outside `target` is a structural error — never do this regardless of context.
+
+`serverParameters` must be at the same level as `device`, `deviceFamily`, and `debuggerType` — all of which are inside `target`.
+
+**Correct**
+
+```json
+{
+  "type": "renesas-hardware",
+  "request": "launch",
+  "name": "Renesas GDB Hardware Debugging",
+  "target": {
+    "device": "R7FA4M2AD",
+    "deviceFamily": "RA",
+    "debuggerType": "SEGGERJLINKARM",
+    "serverParameters": {
+      "-p": 64321
+    }
+  }
+}
+```
+
+**Wrong — `serverParameters` outside `target`**
+
+```json
+{
+  "type": "renesas-hardware",
+  "request": "launch",
+  "name": "Renesas GDB Hardware Debugging",
+  "target": {
+    "device": "R7FA4M2AD",
+    "deviceFamily": "RA",
+    "debuggerType": "SEGGERJLINKARM"
+  },
+  "serverParameters": {
+    "-p": 64321
+  }
+}
+```
 
 ### Update Behavior
 
@@ -281,46 +431,96 @@ When adding or updating `serverParameters`:
 
 When adding or updating a server parameter:
 
-- Verify that the option exists in the **official Renesas documentation, primarily [GDB Server Parameters](server-parameters-ra.rst)**
-- Verify that the relevant documentation indicates support for **J-Link**
-- Validate:
-  - Correct data type: `string`, `number`, `boolean`, or `array`
-  - Allowed values, if specified in the documentation
+1. Determine the `deviceFamily` of the current configuration
+2. Look up the corresponding documentation file using the **Device Family to Server Parameters Documentation Mapping** table
+3. Locate the parameter entry in **that specific file**
+4. Find the **`Emulator:`** field inside that parameter's entry
+5. Check that `J-Link` is explicitly listed as one of the values in the `Emulator:` field — see [How to Read the Emulator Field](#how-to-read-the-emulator-field) for all valid J-Link name forms
+6. If J-Link is confirmed, validate:
+   - Correct data type: `string`, `number`, `boolean`, or `array`
+   - Allowed values, if listed in the `Available Values:` field of that entry
+7. Copy the parameter key **exactly** as it appears in the leftmost column of the entry — see [Server Parameter Key Name Rule](#server-parameter-key-name-rule)
 
-If official documentation cannot be verified:
+### How to Read the Emulator Field
+
+Each parameter entry in the `.rst` file contains an `Emulator:` field that lists which
+debuggers support it. The field may use either the short name or the full debuggerType name
+for J-Link. Both forms are equivalent and must be treated as J-Link support.
+
+**J-Link is considered supported if the `Emulator:` field contains any of the following:**
+
+| Form | Example in Emulator field |
+|------|---------------------------|
+| Short name | `J-Link` |
+| Full ARM name | `SEGGERJLINKARM` |
+| Full RX name | `SEGGERJLINKRX` |
+| Full RISC-V name | `SEGGERJLINKRISCV` |
+
+When checking support, match against **all four forms** — not just `J-Link`.
+
+Example entries and their interpretation:
+
+```
+| Emulator: E2, E2Lite, J-Link |              → supported (short name)
+| Emulator: E2, SEGGERJLINKARM |              → supported (full name)
+| Emulator: SEGGERJLINKRX, SEGGERJLINKRISCV | → supported (full names)
+| Emulator: E2, E2Lite |                      → NOT supported for J-Link
+```
+
+- **Any J-Link variant present** → parameter is supported, proceed with validation
+- **No J-Link variant present** → parameter is not supported for J-Link, do not add it
+- **`Emulator:` field missing entirely** → treat as unsupported, do not guess
+
+If the parameter entry cannot be found in the documentation file:
 
 - Do **not** add or modify the parameter
 - Ask the user to provide the official parameter reference or allow a documentation lookup step
 
 ### Unsupported Parameters
 
-If the requested parameter is **not supported for J-Link**, respond with:
+If the `Emulator:` field does **not** include `J-Link`, respond with:
 
 > `"<option>" is not supported for J-Link and will not be added.`
 
 Then:
 
 - Do **not** add the parameter
-- Do **not** assume compatibility
-- Do **not** guess support if unsure
+- Do **not** assume compatibility based on other emulators listed
+- Do **not** guess support if the `Emulator:` field is missing or ambiguous
 
-### Server Parameter Examples
+### Server Parameter Key Name Rule
 
-#### Port Number
+> **Critical Rule**: The parameter key (e.g. `-uInteface=`) must be copied **exactly**
+> as it appears in the documentation file — character by character, including punctuation,
+> spacing, and trailing `=` if present. **Never rewrite, normalize, or guess the key name.**
 
-```json
-"serverParameters": {
-  "-p": 64321
-}
-```
+Each parameter entry in the `.rst` file has the exact key in the leftmost column of the table.
+Use that value verbatim as the JSON key in `serverParameters`.
 
-#### Interface (If Supported)
+**Correct** — key copied exactly from documentation:
 
 ```json
 "serverParameters": {
   "-uInteface=": "SWD"
 }
 ```
+
+**Wrong** — key rewritten or normalized by AI:
+
+```json
+"serverParameters": {
+  "-interface": "SWD",
+  "-uInterface": "SWD",
+  "-uInterface=": "SWD"
+}
+```
+
+If the user describes a parameter by intent (e.g. "set interface to SWD") rather than by exact key:
+
+1. Look up the documentation file for the active `deviceFamily`
+2. Find the entry whose `Description:` matches the user's intent
+3. Copy the exact key from the leftmost column of that entry
+4. Use that exact key — do not derive or guess it from the description
 
 ## Explaining Server Parameters
 
@@ -329,24 +529,36 @@ of any server parameter, follow these rules strictly.
 
 ### Do
 
-- Use **official documentation text only** → follow in [GDB Server Parameters](server-parameters-ra.rst)
-- Include, if available:
-  - Description
-  - Allowed values
-  - Examples
-- Clearly indicate when text is quoted directly from official documentation
+- Determine the `deviceFamily` of the current configuration
+- Look up the correct documentation file using the **Device Family to Server Parameters Documentation Mapping** table
+- Locate the parameter entry in that file and check its **`Emulator:`** field
+- Only explain the parameter if `J-Link` is listed in the `Emulator:` field
+- When explaining, include all available fields from the entry:
+  - `Description:`
+  - `Default Values:`
+  - `Emulator:` — list which debuggers support it
+  - `Available Values:`
+  - `Example:`
+- Clearly indicate when text is drawn directly from official documentation
 
 ### Do Not
 
-- Guess
-- Infer undocumented behavior
+- Guess meaning or behavior not documented in the entry
+- Infer undocumented behavior from similar parameters
+- Explain a parameter if `J-Link` is not listed in its `Emulator:` field
 - Present undocumented assumptions as facts
 
-### If the Parameter Is Not Documented
+### If the parameter is not in the documentation
 
 Clearly state:
 
-- *It is not documented in the official documentation.*
+- *`"<option>"` is not documented in the official documentation for this device family.*
+
+### If the parameter exists but does not support J-Link
+
+Clearly state:
+
+- *`"<option>"` exists in the documentation but is not supported for J-Link (Emulator field does not include J-Link).*
 
 If documentation cannot be verified, state that clearly and do not provide an interpretation.
 
@@ -359,6 +571,10 @@ These rules apply in **all cases**:
 - Never guess required values
 - Never silently insert default values
 - Never assume a server parameter is supported without documentation verification
+- Never look up server parameters from a documentation file that does not match the active `deviceFamily`
+- **Never place `serverParameters` outside the `target` object** — it must always be nested inside `target`
+- **Never add optional fields** (`images`, `gdbArguments`, `initCommands`, `preRunCommands`, `supportFolder`) unless the user explicitly names them in their request
+- **Never rewrite or normalize a server parameter key name** — always copy it verbatim from the leftmost column of the documentation table
 
 ## Expected Behavior Summary
 
@@ -366,14 +582,25 @@ When handling J-Link launch configuration requests:
 
 1. Confirm the request is for:
    - `"type": "renesas-hardware"`
-   - Confirm that target.debuggerType matches the selected deviceFamily according to the J-Link mapping rules
+   - Confirm that `target.debuggerType` matches the selected `deviceFamily` according to the J-Link mapping rules
 
 2. Check that required fields exist:
    - `device`
    - `deviceFamily`
    - `debuggerType`
+
 3. If required values are missing, ask the user before making changes
+
 4. Modify only the intended J-Link debug configuration
+
 5. Keep unrelated configurations unchanged
-6. Validate `serverParameters` against official documentation `server-parameters-ra.rst` before adding or changing them
-7. Return valid JSON suitable for `.vscode/launch.json`
+
+6. **Output only the fields the user asked for** — do not add optional fields (`images`, `gdbArguments`, `initCommands`, `preRunCommands`, `supportFolder`) unless explicitly requested by name
+
+7. When adding `serverParameters`:
+   - Validate against the correct documentation file for the active `deviceFamily` using the **Device Family to Server Parameters Documentation Mapping** table
+   - Confirm `J-Link` is listed in the `Emulator:` field of the parameter entry
+   - Copy the parameter key **verbatim** from the leftmost column of the documentation table — do not rewrite or normalize it
+   - Place `serverParameters` inside `target` — never outside
+
+8. Return valid JSON suitable for `.vscode/launch.json`
