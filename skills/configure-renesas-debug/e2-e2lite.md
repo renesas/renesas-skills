@@ -321,6 +321,89 @@ Example (disable hotplug — remove the field):
 }
 ```
 
+## External Flash Debugging Rules (E2/E2Lite)
+
+External Flash Debugging is supported **only for RA8 devices** (`target.device` starts with `R7KA8`).  
+External Flash Debugging must **not** be enabled for other devices.
+
+When the user requests External Flash Debugging support:
+- Verify that device is an RA8 device (`target.device` starts with `R7KA8`). If not, inform the user that External Flash Debugging is not supported for that device and do not proceed
+- Verify that `target.board` is present. If not, inform the user that `board` field is required for External Flash Debugging and request the user to add it manually
+- Add `"externalFlashSupport": true` inside the `target` object
+
+### Validation
+
+- If `target` or `target.device` is missing, ask the user to provide the missing field
+- Do not guess or infer `device`
+- To verify: check that `target.device` starts with `R7KA8`
+- If `target.board` is missing when enabling External Flash Debugging, do not proceed. Request the user to add `board` manually before enabling External Flash Debugging
+
+### Dependency Rule (External Flash)
+
+- `"externalFlashSupport": true` requires `target.board` to be present
+- `target.board` is automatically added when the user creates the JSON file automatically
+- If `target.board` is not present, the user must add it manually
+- `target.board` is **not** required when External Flash Debugging is disabled
+
+### Decision flow
+
+1. Check whether `target.device` starts with `R7KA8` (RA8 devices)
+2. If `target.device` is not an RA8 device, do not proceed
+3. If yes, check whether `target.board` is present
+4. If `target.board` is present and the user requests External Flash Debugging, add `"externalFlashSupport": true` inside `target`
+5. If `target.board` is missing, request the user to add it manually before proceeding
+
+### Field Reference
+
+- `"externalFlashSupport": true`
+  - Enables External Flash Debugging support
+  - Allows the debugger to access and debug code running on external flash memory
+- `target.board`
+  - Identifies the board used for debugging
+  - Required when External Flash Debugging is enabled
+  - Automatically added when the JSON file is created automatically
+  - Must be added manually if not present
+
+### To disable External Flash Debugging support
+
+- Either set `"externalFlashSupport": false` inside the `target` object, or
+- Remove the `"externalFlashSupport"` field from the `target` object
+- `target.board` is no longer required when External Flash Debugging is disabled
+
+### Example (enable External Flash Debugging)
+
+```json
+"target": {
+  "device": "R7KA8M2JF_CPU0",
+  "deviceFamily": "RA",
+  "debuggerType": "E2",
+  "board": "EK-RA8M2",
+  "externalFlashSupport": true
+}
+```
+
+### Example (disable External Flash Debugging — set the field to false):
+
+```json
+"target": {
+  "device": "R7KA8M2JF_CPU0",
+  "deviceFamily": "RA",
+  "debuggerType": "E2",
+  "board": "EK-RA8M2",
+  "externalFlashSupport": false
+}
+```
+
+### Example (disable External Flash Debugging — remove the field):
+
+```json
+"target": {
+  "device": "R7KA8M2JF_CPU0",
+  "deviceFamily": "RA",
+  "debuggerType": "E2"
+}
+```
+
 ## Server Parameters (E2/E2Lite Only)
 
 ### Placement
