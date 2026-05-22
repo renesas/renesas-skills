@@ -190,6 +190,107 @@ The following fields are **not required** for a standard debug configuration but
 }
 ```
 
+## RTOS Support Rules (Simulator)
+
+RTOS debugging with simulator is supported **only for RL78 device family**.  
+RTOS debugging must **not** be enabled for other device families.  
+
+When the user requests RTOS debugging for simulator:
+- Verify that `target.deviceFamily` is `RL78`. If not, inform the user that RTOS debugging is not supported for that device family and do not proceed
+- Add `"rtosIntegration": true` inside the `target` object (it must be at the same level as `device`, `deviceFamily`, and `debuggerType`)
+- RTOS-related server parameters such as `"-uOSRestriction="` may be added **only when explicitly requested by the user**, and must be placed inside `target.serverParameters`
+
+### Validation
+
+- If `target` or `target.deviceFamily` is missing, ask the user to provide the missing field
+- Do not guess or infer `deviceFamily`
+
+### Decision flow
+
+1. Check whether `target.debuggerType` is `SIMULATOR`
+2. If yes, check whether `target.deviceFamily` is `RL78`
+3. If `target.deviceFamily` is `RL78` and the user requests RTOS debugging, add `"rtosIntegration": true` inside `target`
+4. Add `target.serverParameters["-uOSRestriction=": 1]` only if the user explicitly requests it
+
+### Explicit request for `"-uOSRestriction="`
+
+Explicit requests include:
+- "enable OS restriction"
+- "set `"-uOSRestriction="` to 1"
+- "restrict thread checking to the current thread"
+
+### Field Reference
+
+Use this section to explain field behavior when the user asks.
+- `"rtosIntegration": true`
+  - Enables RTOS debugging
+  - OS threads are shown in the Debug and Call Stack views
+  - Thread context (stack frames, registers, variables) is available for each thread
+- `"-uOSRestriction="`
+  - A server parameter inside `target.serverParameters`
+  - Controls how OS threads are checked in the Debug View
+  - Helps improve debugger responsiveness when many OS threads exist
+
+### Dependency Rule (RTOS)
+
+- `"rtosIntegration"` enables RTOS debugging
+- RTOS threads are available only when `"rtosIntegration"` is enabled
+- `"-uOSRestriction="` controls OS thread checking behavior in the Debug View
+  - `0` (default): do not restrict OS thread checking
+  - `1`: restrict OS thread checking to the current thread
+- `"-uOSRestriction="` is effective only when `"rtosIntegration": true` is enabled
+- `"-uOSRestriction="` does **not** enable RTOS support by itself
+
+### To disable RTOS support
+- Either set `"rtosIntegration": false` inside the `target` object, or
+- Remove the `"rtosIntegration"` field from the `target` object
+
+### Example (enable RTOS)
+
+```json
+"target": {
+  "device": "R7F100GSJ",
+  "deviceFamily": "RL78",
+  "debuggerType": "SIMULATOR",
+  "rtosIntegration": true
+}
+```
+
+### Example (enable RTOS with OS restriction enabled)
+
+```json
+"target": {
+  "device": "R7F100GSJ",
+  "deviceFamily": "RL78",
+  "debuggerType": "SIMULATOR",
+  "rtosIntegration": true,
+  "serverParameters": {
+    "-uOSRestriction=": 1
+  }
+}
+```
+
+### Example (disable RTOS — set the field to false):
+
+```json
+"target": {
+  "device": "R7F100GSJ",
+  "deviceFamily": "RL78",
+  "debuggerType": "SIMULATOR",
+  "rtosIntegration": false
+}
+```
+
+### Example (disable RTOS — remove the field):
+
+```json
+"target": {
+  "device": "R7F100GSJ",
+  "deviceFamily": "RL78",
+  "debuggerType": "SIMULATOR"
+}
+```
+
 ## Safety Rules
 
 These rules apply in **all cases**:
